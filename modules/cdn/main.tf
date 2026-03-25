@@ -10,8 +10,8 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   origin {
     origin_id                = "S3Origin"
+    domain_name              = var.bucket_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
-    domain_name              = aws_s3_bucket.s3_bucket.bucket_regional_domain_name
   }
 
   default_cache_behavior {

@@ -18,6 +18,15 @@ terraform {
 provider "aws" { profile = var.aws_profile }
 
 module "storage" {
-  source       = "./modules/storage"
-  project_name = var.project_name
+  source = "./modules/storage"
+
+  project_name                = var.project_name
+  cloudfront_distribution_arn = module.cdn.distribution_arn
+}
+
+module "cdn" {
+  source = "./modules/cdn"
+
+  project_name       = var.project_name
+  bucket_domain_name = module.storage.bucket_domain_name
 }
