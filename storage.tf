@@ -1,19 +1,23 @@
-resource "aws_s3_bucket" "calorie_lens_bucket" { bucket = "calorie-lens-bucket" }
+resource "random_id" "suffix" { byte_length = 4 }
 
-resource "aws_cloudfront_origin_access_control" "oac" {
-  name                              = "calorie_oac"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
+resource "aws_s3_bucket" "s3_bucket" {
+  bucket = "${var.project_name}-${random_id.suffix.hex}"
 }
 
-resource "aws_cloudfront_distribution" "calorie_lens_distribution" {
+resource "aws_cloudfront_origin_access_control" "oac" {
+  name                              = "${var.project_name}-oac"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+  origin_access_control_origin_type = "s3"
+}
+
+resource "aws_cloudfront_distribution" "distribution" {
   enabled = true
 
   origin {
     origin_id                = "S3Origin"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
-    domain_name              = aws_s3_bucket.calorie_lens_bucket.bucket_regional_domain_name
+    domain_name              = aws_s3_bucket.s3_bucket.bucket_regional_domain_name
   }
 
   default_cache_behavior {
