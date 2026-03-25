@@ -1,24 +1,16 @@
-# Terraform configuration files
+# Local Terraform data
 .terraform/
+
+# State files (stored remotely in S3)
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
-.terraformrc
-terraform.rc
 
-# Crash log files
+# Sensitive variable files
+*.tfvars
+
+# Mac junk
+.DS_Store
+
+# Crash logs
 crash.log
 crash.*.log
-
-# hclfmt
-.hclfmt.cache
-
-# tfsec
-.tfsec/
-
-# Environment-specific files
-*.tfvars
-*.tfplan
-
-# Other files
-.DS_Store

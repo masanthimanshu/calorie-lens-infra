@@ -8,6 +8,8 @@ terraform {
 
   backend "s3" {
     encrypt        = true
+    use_lockfile   = true
+    profile        = "scoobies"
     region         = "ap-south-1"
     key            = "terraform.tfstate"
     bucket         = "calorie-lens-tf-state-bucket"
