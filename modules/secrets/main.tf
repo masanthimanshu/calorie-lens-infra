@@ -6,6 +6,6 @@ resource "aws_ssm_parameter" "bucket_name" {
 
 resource "aws_ssm_parameter" "cdn_url" {
   name  = "/${var.project_name}/cdn_url"
-  value = var.cdn_url
+  value = "https://${var.cdn_url}"
   type  = "String"
 }
