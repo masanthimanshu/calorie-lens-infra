@@ -4,31 +4,32 @@ Terraform configuration for provisioning the AWS backend resources used by the C
 
 ## What this project does
 
-This repository manages AWS infrastructure for Calorie Lens using Terraform:
+This repository manages AWS infrastructure for Calorie Lens using Terraform.
+It provisiones:
 
-- Creates an S3 bucket for application assets and storage
-- Deploys a CloudFront distribution with Origin Access Control (OAC)
-- Stores runtime metadata in AWS Systems Manager Parameter Store
-- Uses an S3 backend with DynamoDB locking for Terraform state management
+- An encrypted S3 bucket for application assets and storage
+- A CloudFront distribution with Origin Access Control (OAC)
+- Runtime metadata storage in AWS Systems Manager Parameter Store
+- A Terraform state backend in S3 with DynamoDB locking
 
-## Why this is useful
+## Why this project is useful
 
-- Provides a reproducible infrastructure deployment for the Calorie Lens backend
-- Keeps content delivery secure with CloudFront and restricted S3 access
-- Simplifies environment-specific configuration via `dev.tfvars`
-- Enables safe Terraform state storage and locking in AWS
+- Provides reproducible infrastructure deployment for the Calorie Lens backend
+- Secures content delivery with CloudFront and restricted S3 access
+- Enables environment-specific configuration using `*.tfvars`
+- Ensures safe Terraform state with remote backend and locking
 
 ## Prerequisites
 
-- Terraform 1.0+ installed
+- Terraform 1.0 or newer
 - AWS CLI configured with the required named profiles
-- Permissions to create S3 buckets, DynamoDB tables, CloudFront distributions, and SSM parameters
+- AWS permissions to create S3 buckets, DynamoDB tables, CloudFront distributions, and SSM parameters
 
 ## Getting started
 
 ### 1. Configure environment values
 
-Update `dev.tfvars` to set the AWS profile and project name used for deployment.
+Edit `dev.tfvars` to set your deployment values.
 
 Example:
 
@@ -39,7 +40,7 @@ aws_profile  = "serverless-user"
 
 ### 2. Bootstrap the Terraform backend
 
-The `bootstrap/` workspace creates the S3 backend bucket and DynamoDB lock table used by the root project.
+The `bootstrap/` workspace creates the remote state bucket and DynamoDB lock table.
 
 ```bash
 cd bootstrap
@@ -54,14 +55,19 @@ cd ..
 terraform init
 ```
 
-### 4. Plan and apply infrastructure
+### 4. Plan infrastructure changes
 
 ```bash
 terraform plan -var-file=dev.tfvars
+```
+
+### 5. Apply infrastructure
+
+```bash
 terraform apply -var-file=dev.tfvars
 ```
 
-### 5. Destroy infrastructure
+### 6. Destroy infrastructure
 
 ```bash
 terraform destroy -var-file=dev.tfvars
@@ -69,37 +75,46 @@ terraform destroy -var-file=dev.tfvars
 
 ## Repository structure
 
-- `bootstrap/` – creates backend state resources (S3 + DynamoDB)
-- `modules/` – reusable Terraform modules
-  - `storage/` – managed S3 bucket, encryption, versioning, policy, lifecycle rules
-  - `cdn/` – CloudFront distribution with origin access control
-  - `secrets/` – stores bucket and CDN metadata in SSM Parameter Store
-- `main.tf` – root Terraform provider and backend configuration
-- `modules.tf` – module wiring and cross-module dependencies
-- `variables.tf` – root-level Terraform variables
-- `dev.tfvars` – local environment values for development
+- `bootstrap/` — creates backend state resources (S3 + DynamoDB)
+- `modules/` — reusable Terraform modules
+  - `storage/` — S3 bucket, encryption, versioning, policy, lifecycle rules
+  - `cdn/` — CloudFront distribution with origin access control
+  - `secrets/` — writes metadata to SSM Parameter Store
+- `main.tf` — root provider and backend configuration
+- `modules.tf` — module wiring and dependencies
+- `variables.tf` — root-level Terraform variables
+- `dev.tfvars` — local environment values for development
 
-## Module flow
+## Module workflow
 
-- `module.cdn` is built from the S3 bucket domain name from `module.storage`
-- `module.storage` grants CloudFront access using the distribution ARN from `module.cdn`
-- `module.secrets` records the bucket name and CDN URL after both modules are created
+1. `module.storage` creates the S3 bucket and exposes `bucket_domain_name`
+2. `module.cdn` creates the CloudFront distribution using that bucket domain name
+3. `module.storage` receives the distribution ARN so CloudFront can access the bucket
+4. `module.secrets` stores the bucket name and CDN URL in SSM Parameter Store
+
+## Terraform conventions
+
+- Provider version is pinned to `~> 6.0`
+- Root variables use `aws_profile` and `project_name`
+- Avoid hardcoding AWS credentials in Terraform files
+- Use `snake_case` for Terraform variable and resource names
+- Add module outputs only when another module or root configuration needs them
 
 ## Support
 
-For help:
+If you need help:
 
 - Open an issue in this repository
-- Use `TF_LOG=DEBUG` to diagnose Terraform plan/apply issues
-- Validate AWS credentials with `aws sts get-caller-identity --profile <profile>`
+- Use `TF_LOG=DEBUG` to troubleshoot Terraform operations
+- Verify AWS credentials with `aws sts get-caller-identity --profile <profile>`
 
 ## Contributing
 
-Contributions are welcome. Please open issues or pull requests for module improvements, bug fixes, or documentation updates.
+Contributions are welcome. Open issues or pull requests for module improvements, bug fixes, or documentation updates.
 
-> If a `CONTRIBUTING.md` file exists later, follow those repository-level guidelines.
+For contribution guidance, see `CONTRIBUTING.md`.
 
 ## Notes
 
-- This repository does not include a LICENSE file at the moment.
-- Keep `dev.tfvars` values accurate for each deployment environment.
+- This repo does not include a `LICENSE` file yet.
+- Create additional environment files such as `staging.tfvars` or `prod.tfvars` if needed.
