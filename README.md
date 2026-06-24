@@ -1,120 +1,79 @@
 # Calorie Lens Infrastructure
 
-Terraform configuration for provisioning the AWS backend resources used by the Calorie Lens application.
+Terraform-based AWS infrastructure for the Calorie Lens project.
 
-## What this project does
+## What the project does
 
-This repository manages AWS infrastructure for Calorie Lens using Terraform.
-It provisiones:
+This repository defines reusable AWS infrastructure using Terraform.
 
-- An encrypted S3 bucket for application assets and storage
-- A CloudFront distribution with Origin Access Control (OAC)
-- Runtime metadata storage in AWS Systems Manager Parameter Store
-- A Terraform state backend in S3 with DynamoDB locking
+- `bootstrap/` provisions Terraform backend state resources: an S3 bucket for remote state and a DynamoDB table for Terraform state locking.
+- `modules/storage/` creates an encrypted, versioned S3 bucket with lifecycle rules and a CloudFront access policy.
+- `modules/cdn/` creates a CloudFront distribution with Origin Access Control (OAC) for secure S3 origin access.
+- `modules/secrets/` stores configuration values in AWS Systems Manager Parameter Store.
+- The root configuration wires these modules together and publishes infrastructure outputs.
 
 ## Why this project is useful
 
-- Provides reproducible infrastructure deployment for the Calorie Lens backend
-- Secures content delivery with CloudFront and restricted S3 access
-- Enables environment-specific configuration using `*.tfvars`
-- Ensures safe Terraform state with remote backend and locking
-
-## Prerequisites
-
-- Terraform 1.0 or newer
-- AWS CLI configured with the required named profiles
-- AWS permissions to create S3 buckets, DynamoDB tables, CloudFront distributions, and SSM parameters
+- Establishes production-ready AWS infrastructure for storage, CDN delivery, and secrets configuration.
+- Keeps backend state provisioning separate from application infrastructure.
+- Enforces AWS security best practices for S3 and CloudFront.
+- Supports modular Terraform reuse across future infrastructure additions.
 
 ## Getting started
 
-### 1. Configure environment values
+### Prerequisites
 
-Edit `dev.tfvars` to set your deployment values.
+- Terraform installed
+- AWS CLI configured with a working AWS profile
+- AWS permissions for S3, DynamoDB, CloudFront, and SSM Parameter Store
 
-Example:
-
-```hcl
-project_name = "calorie-lens"
-aws_profile  = "serverless-user"
-```
-
-### 2. Bootstrap the Terraform backend
-
-The `bootstrap/` workspace creates the remote state bucket and DynamoDB lock table.
+### Bootstrap the Terraform backend
 
 ```bash
 cd bootstrap
 terraform init
-terraform apply -var-file=../dev.tfvars
+terraform validate
+terraform plan
+terraform apply
 ```
 
-### 3. Initialize the root workspace
+This creates the backend state bucket and DynamoDB lock table used by the main configuration.
+
+### Deploy the main infrastructure
+
+From the repository root:
 
 ```bash
-cd ..
 terraform init
+terraform validate
+terraform plan -var="aws_profile=<profile>" -var="project_name=<project>"
+terraform apply -var="aws_profile=<profile>" -var="project_name=<project>"
 ```
 
-### 4. Plan infrastructure changes
+### Required variables
 
-```bash
-terraform plan -var-file=dev.tfvars
-```
+- `aws_profile`: AWS CLI profile name
+- `project_name`: Project name prefix for resources
 
-### 5. Apply infrastructure
+## Project structure
 
-```bash
-terraform apply -var-file=dev.tfvars
-```
+- `bootstrap/` — backend state Terraform configuration
+- `modules/storage/` — encrypted S3 bucket module
+- `modules/cdn/` — CloudFront distribution module
+- `modules/secrets/` — SSM Parameter Store module
+- `main.tf`, `modules.tf`, `variables.tf` — root Terraform configuration and module wiring
 
-### 6. Destroy infrastructure
+## Where to get help
 
-```bash
-terraform destroy -var-file=dev.tfvars
-```
+- Open an issue in this repository for questions or problems.
+- Review `AGENTS.md` for project-specific agent guidance.
 
-## Repository structure
+## Who maintains and contributes
 
-- `bootstrap/` — creates backend state resources (S3 + DynamoDB)
-- `modules/` — reusable Terraform modules
-  - `storage/` — S3 bucket, encryption, versioning, policy, lifecycle rules
-  - `cdn/` — CloudFront distribution with origin access control
-  - `secrets/` — writes metadata to SSM Parameter Store
-- `main.tf` — root provider and backend configuration
-- `modules.tf` — module wiring and dependencies
-- `variables.tf` — root-level Terraform variables
-- `dev.tfvars` — local environment values for development
+Contributions are welcome.
 
-## Module workflow
+- Use `terraform validate` and `terraform plan` before making changes.
+- Preserve module boundaries and existing AWS provider conventions.
+- Keep this repository infrastructure-only; do not add application code.
 
-1. `module.storage` creates the S3 bucket and exposes `bucket_domain_name`
-2. `module.cdn` creates the CloudFront distribution using that bucket domain name
-3. `module.storage` receives the distribution ARN so CloudFront can access the bucket
-4. `module.secrets` stores the bucket name and CDN URL in SSM Parameter Store
-
-## Terraform conventions
-
-- Provider version is pinned to `~> 6.0`
-- Root variables use `aws_profile` and `project_name`
-- Avoid hardcoding AWS credentials in Terraform files
-- Use `snake_case` for Terraform variable and resource names
-- Add module outputs only when another module or root configuration needs them
-
-## Support
-
-If you need help:
-
-- Open an issue in this repository
-- Use `TF_LOG=DEBUG` to troubleshoot Terraform operations
-- Verify AWS credentials with `aws sts get-caller-identity --profile <profile>`
-
-## Contributing
-
-Contributions are welcome. Open issues or pull requests for module improvements, bug fixes, or documentation updates.
-
-For contribution guidance, see `CONTRIBUTING.md`.
-
-## Notes
-
-- This repo does not include a `LICENSE` file yet.
-- Create additional environment files such as `staging.tfvars` or `prod.tfvars` if needed.
+If you would like to contribute more formally, please open an issue first to discuss the proposed change.
